@@ -31,12 +31,12 @@
           </select>
         </label>
         <label>
-          部门代码:
-          <input v-model="queryBmdm" type="text" required>
-        </label>
-        <label>
           年月:
           <input v-model="queryNy" type="text" required>
+        </label>
+        <label>
+          门店编号:
+          <input v-model="queryFdbh" type="number" required>
         </label>
       </div>
       <input type="submit" value="查询">
@@ -57,6 +57,15 @@
           </tr>
         </tbody>
       </table>
+      <div class="pagination">
+        <button @click="prevPage" :disabled="pageNumber === 1">上一页</button>
+        <span>第 {{ pageNumber }} 页</span>
+        <button @click="nextPage" :disabled="queryResult.length < pageSize">下一页</button>
+        <label>
+          每页条数:
+          <input v-model="pageSize" type="number" min="1" @change="queryData">
+        </label>
+      </div>
     </div>
 
     <div class="footer">
@@ -64,7 +73,6 @@
     </div>
   </div>
 </template>
-
 <script>
 import axios from 'axios';
 
@@ -76,8 +84,10 @@ export default {
       message: '',
       pageTitle: '销售计划上传',
       queryBudgetType: '',
-      queryBmdm: '',
       queryNy: '',
+      queryFdbh: null,
+      pageNumber: 1,
+      pageSize: 10,
       queryResult: [],
       tableHeaders: []
     };
@@ -113,23 +123,25 @@ export default {
       }
     },
     async queryData() {
-      if (!this.queryBudgetType || !this.queryBmdm || !this.queryNy) {
-        this.message = '请填写所有查询字段';
+      if (!this.queryBudgetType || !this.queryNy || !this.queryFdbh) {
+        this.message = '请填写查询类型、年月和门店编号';
         return;
       }
 
       try {
-        const response = await axios.get(`/upload/getBudgetList`, {
+        const response = await axios.get('/upload/getBudgetList', {
           params: {
             budgetType: this.queryBudgetType,
-            bmdm: this.queryBmdm,
-            ny: this.queryNy
+            ny: this.queryNy,
+            fdbh: this.queryFdbh,
+            pageNum: this.pageNumber,
+            pageSize: this.pageSize
           }
         });
 
-        if (response.status === 200 && response.data.length) {
-          this.queryResult = response.data;
-          this.tableHeaders = Object.keys(response.data[0]);
+        if (response.status === 200 && response.data.data.length) {
+          this.queryResult = response.data.data;
+          this.tableHeaders = Object.keys(response.data.data[0]);
         } else {
           this.queryResult = [];
           this.message = '没有查询到数据';
@@ -144,8 +156,8 @@ export default {
         const response = await axios.delete('/upload/deleteBudgetList', {
           data: {
             budgetType: this.queryBudgetType,
-            bmdm: this.queryBmdm,
-            ny: this.queryNy,
+            bmdm: row.bmdm,
+            ny: row.ny,
             fdbh: row.fdbh,
             sbid: row.sbid,
             hth: row.hth
@@ -160,11 +172,20 @@ export default {
       } catch (error) {
         this.message = `删除出错: ${error.message}`;
       }
+    },
+    prevPage() {
+      if (this.pageNumber > 1) {
+        this.pageNumber--;
+        this.queryData();
+      }
+    },
+    nextPage() {
+      this.pageNumber++;
+      this.queryData();
     }
   }
 }
 </script>
-
 <style scoped>
 .container {
   font-family: Arial, sans-serif;
@@ -205,7 +226,7 @@ input[type="file"],
 select,
 input[type="submit"],
 input[type="text"],
-input[type="month"] {
+input[type="number"] {
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 5px;
@@ -242,6 +263,18 @@ input[type="month"] {
   background-color: #f8f8f8;
 }
 
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.pagination input[type="number"] {
+  width: 60px;
+}
+
 .footer {
   text-align: center;
   margin-top: 20px;
@@ -257,8 +290,13 @@ button {
   cursor: pointer;
   border-radius: 5px;
 }
-  
+
 button:hover {
   background-color: #ff3333;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 </style>
