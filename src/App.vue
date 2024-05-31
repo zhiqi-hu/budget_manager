@@ -20,11 +20,14 @@ export default {
 </script>
 
 <style scoped>
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   text-align: center;
   color: #2c3e50;
-  margin-top: 100px;
 }
-
 </style>

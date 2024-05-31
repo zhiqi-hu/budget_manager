@@ -1,75 +1,86 @@
 <template>
-  <div class="container">
-    <img class="skp-logo" src="/src/templates/logo-pink.png" alt="SKP Logo">
-    <h1>销售计划导入</h1>
-    <form class="upload-form" @submit.prevent="submitForm" enctype="multipart/form-data">
-      <label>
-        选择预算类型:
-        <select v-model="selectedBudgetType" required>
-          <option value="" disabled selected>选择预算类型</option>
-          <option value="appraisal">考核预算</option>
-          <option value="sprint">冲刺预算</option>
-        </select>
-      </label>
-      <label>
-        选择文件:
-        <input type="file" @change="handleFileChange" accept=".xlsx, .xls" required>
-      </label>
-      <input type="submit" value="上传">
-    </form>
-    <div v-if="message" class="message">{{ message }}</div>
+  <div class="container"
+    :style="{ maxWidth: queryResult && queryResult.length ? '100vw' : '800px', marginTop: queryResult && queryResult.length ? '' : '100px', height: queryResult && queryResult.length ? '100vh' : '' }"
+    style="overflow: hidden;">
+    <div class="flex-container">
 
-    <h2>查询数据</h2>
-    <form class="query-form" @submit.prevent="queryData">
-      <div class="form-row">
-        <label>
-          选择查询类型:
-          <select v-model="queryBudgetType" required>
-            <option value="" disabled selected>选择预算类型</option>
-            <option value="appraisal">考核预算</option>
-            <option value="sprint">冲刺预算</option>
-          </select>
-        </label>
-        <label>
-          年月:
-          <input v-model="queryNy" type="text" required>
-        </label>
-        <label>
-          门店编号:
-          <input v-model="queryFdbh" type="number" required>
-        </label>
-      </div>
-      <input type="submit" value="查询">
-    </form>
-    <div v-if="queryResult && queryResult.length" class="query-result">
-      <h3>查询结果:</h3>
-      <table class="result-table">
-        <thead>
-          <tr>
-            <th v-for="header in tableHeaders" :key="header">{{ header }}</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(row, rowIndex) in queryResult" :key="rowIndex">
-            <td v-for="header in tableHeaders" :key="header">{{ row[header] }}</td>
-            <td><button @click="deleteRow(row, rowIndex)">删除</button></td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="pagination">
-        <button @click="prevPage" :disabled="pageNumber === 1">上一页</button>
-        <span>第 {{ pageNumber }} 页</span>
-        <button @click="nextPage" :disabled="queryResult.length < pageSize">下一页</button>
-        <label>
-          每页条数:
-          <input v-model="pageSize" type="number" min="1" @change="queryData">
-        </label>
-      </div>
-    </div>
+      <div style="width: 100%">
+        <img class="skp-logo" src="/src/templates/logo-pink.png" alt="SKP Logo">
+        <h1>销售计划导入</h1>
+        <form class="upload-form" @submit.prevent="submitForm" enctype="multipart/form-data">
+          <label>
+            选择预算类型:
+            <select v-model="selectedBudgetType" required>
+              <option value="" disabled selected>选择预算类型</option>
+              <option value="appraisal">考核预算</option>
+              <option value="sprint">冲刺预算</option>
+            </select>
+          </label>
+          <label>
+            选择文件:
+            <input type="file" @change="handleFileChange" accept=".xlsx, .xls" required>
+          </label>
+          <input type="submit" value="上传">
+        </form>
+        <div v-if="message" class="message">{{ message }}</div>
 
-    <div class="footer">
+        <h2>查询数据</h2>
+        <form class="query-form" @submit.prevent="queryData">
+          <div class="form-row">
+            <label>
+              选择查询类型:
+              <select v-model="queryBudgetType" required>
+                <option value="" disabled selected>选择预算类型</option>
+                <option value="appraisal">考核预算</option>
+                <option value="sprint">冲刺预算</option>
+              </select>
+            </label>
+            <label>
+              年月:
+              <input v-model="queryNy" type="text" required>
+            </label>
+            <label>
+              门店编号:
+              <input v-model="queryFdbh" type="number" required>
+            </label>
+          </div>
+          <input type="submit" value="查询">
+        </form>
+      </div>
+      <div v-if="queryResult && queryResult.length" class="query-result">
+        <h3>查询结果:</h3>
+        <div style="height:700px;overflow: auto;">
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th v-for="header in tableHeaders" :key="header">{{ header }}</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, rowIndex) in queryResult" :key="rowIndex">
+                <td v-for="header in tableHeaders" :key="header">{{ row[header] }}</td>
+                <td><button @click="deleteRow(row, rowIndex)">删除</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <button @click="prevPage" :disabled="pageNumber === 1">上一页</button>
+          <span>第 {{ pageNumber }} 页</span>
+          <button @click="nextPage" :disabled="queryResult.length < pageSize">下一页</button>
+          <div>
+
+            每页条数:
+            <input v-model="pageSize" type="number" min="1" @change="queryData">
+
+          </div>
+        </div>
+
+      </div>
+      <div class="footer">
       &copy; 2024 北京SKP
+    </div>
     </div>
   </div>
 </template>
@@ -187,6 +198,12 @@ export default {
 }
 </script>
 <style scoped>
+.flex-container {
+  display: flex;
+  flex-direction: row;
+
+}
+
 .container {
   font-family: Arial, sans-serif;
   padding: 20px;
@@ -194,6 +211,7 @@ export default {
   border-radius: 10px;
   max-width: 800px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .skp-logo {
@@ -245,10 +263,14 @@ input[type="number"] {
   background-color: #e0e0e0;
   border-radius: 5px;
   overflow: auto;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .result-table {
   width: 100%;
+  height: 80%;
+  overflow: scroll;
   border-collapse: collapse;
 }
 
