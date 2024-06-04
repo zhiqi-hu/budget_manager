@@ -1,9 +1,8 @@
 <template>
   <div class="container"
-    :style="{ maxWidth: queryResult && queryResult.length ? '100vw' : '800px', marginTop: queryResult && queryResult.length ? '' : '100px', height: queryResult && queryResult.length ? '100vh' : '' }"
-    style="overflow: hidden;">
+    :style="{ maxWidth: queryResult && queryResult.length ? '100vw' : '800px', marginTop: queryResult && queryResult.length ? '' : '0px', height: queryResult && queryResult.length ? 'auto' : '' }"
+    style="overflow: auto">
     <div class="flex-container">
-
       <div style="width: 100%">
         <img class="skp-logo" src="/src/templates/logo-pink.png" alt="SKP Logo">
         <h1>销售计划导入</h1>
@@ -22,7 +21,8 @@
           </label>
           <input type="submit" value="上传">
         </form>
-        <div v-if="message" class="message">{{ message }}</div>
+      
+        <div style="height: auto" v-if="message" class="message">{{ message }}</div>
 
         <h2>查询数据</h2>
         <form class="query-form" @submit.prevent="queryData">
@@ -45,49 +45,36 @@
             </label>
           </div>
           <input type="submit" value="查询">
+          <div style="margin-top: 20px;" v-if="queryResult && queryResult.length">
+            门店预算合计：{{ sumAmount ?? 0 }} 元
+          </div>
         </form>
       </div>
       <div v-if="queryResult && queryResult.length" class="query-result">
         <h3>查询结果:</h3>
-        <div style="height:700px;overflow: auto;">
-          <table class="result-table">
-            <thead>
-              <tr>
-                <th v-for="header in tableHeaders" :key="header">{{ header }}</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(row, rowIndex) in queryResult" :key="rowIndex">
-                <td v-for="header in tableHeaders" :key="header">{{ row[header] }}</td>
-                <td><button @click="deleteRow(row, rowIndex)">删除</button></td>
-              </tr>
-            </tbody>
-          </table>
+        <div style="height:750px;overflow: auto;">
+          <Table :dataSource="queryResult" :columns="tableHeaders" :pagination="false" />
         </div>
-        <div class="pagination">
-          <button @click="prevPage" :disabled="pageNumber === 1">上一页</button>
-          <span>第 {{ pageNumber }} 页</span>
-          <button @click="nextPage" :disabled="queryResult.length < pageSize">下一页</button>
-          <div>
-
-            每页条数:
-            <input v-model="pageSize" type="number" min="1" @change="queryData">
-
-          </div>
-        </div>
-
+        <a-pagination
+          :current="pageNumber"
+          :total="totalResults"
+          :page-size="pageSize"
+          @change="handlePageChange"
+          @showSizeChange="handlePageSizeChange"
+          show-size-changer
+          :show-total="showTotal"
+        />
       </div>
-      <div class="footer">
-      &copy; 2024 北京SKP
-    </div>
     </div>
   </div>
 </template>
+
 <script>
 import axios from 'axios';
+import { Table, Pagination } from 'ant-design-vue';
 
 export default {
+  components: { Table, Pagination },
   data() {
     return {
       selectedBudgetType: '',
@@ -100,7 +87,12 @@ export default {
       pageNumber: 1,
       pageSize: 10,
       queryResult: [],
-      tableHeaders: []
+      totalResults: 0,
+      sumAmount: 0,
+      tableHeaders: [
+        { title: '序号', dataIndex: 'index', key: 'index' },
+        // 动态添加的列
+      ]
     };
   },
   methods: {
@@ -150,9 +142,24 @@ export default {
           }
         });
 
-        if (response.status === 200 && response.data.data.length) {
-          this.queryResult = response.data.data;
-          this.tableHeaders = Object.keys(response.data.data[0]);
+        if (response.status === 200 && response.data.data && response.data.data.records.length) {
+          const keys = Object.keys(response.data.data.records[0]);
+          this.tableHeaders = [
+            { title: '序号', dataIndex: 'index', key: 'index' },
+            ...keys.map(item => ({ title: item, dataIndex: item, key: item }))
+          ];
+          this.queryResult = response.data.data.records.map((item, index) => ({ index: (this.pageNumber - 1) * this.pageSize + index + 1, ...item }));
+          this.totalResults = response.data.data.total;
+
+          // 获取汇总金额
+          const sumResponse = await axios.get('/upload/getSumAmount', {
+            params: {
+              budgetType: this.queryBudgetType,
+              ny: this.queryNy,
+              fdbh: this.queryFdbh
+            }
+          });
+          this.sumAmount = sumResponse.data.sumAmount || 0;
         } else {
           this.queryResult = [];
           this.message = '没有查询到数据';
@@ -184,24 +191,25 @@ export default {
         this.message = `删除出错: ${error.message}`;
       }
     },
-    prevPage() {
-      if (this.pageNumber > 1) {
-        this.pageNumber--;
-        this.queryData();
-      }
-    },
-    nextPage() {
-      this.pageNumber++;
+    handlePageChange(page) {
+      this.pageNumber = page;
       this.queryData();
+    },
+    handlePageSizeChange(current, size) {
+      this.pageSize = size;
+      this.queryData();
+    },
+    showTotal(total) {
+      return `总共 ${total} 条`;
     }
   }
 }
 </script>
+
 <style scoped>
 .flex-container {
   display: flex;
   flex-direction: row;
-
 }
 
 .container {
@@ -209,7 +217,7 @@ export default {
   padding: 20px;
   background-color: #f4f4f4;
   border-radius: 10px;
-  max-width: 800px;
+  max-width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
 }
@@ -224,10 +232,11 @@ h1,
 h2 {
   color: #333;
   text-align: center;
+  padding: 10px;
 }
 
 .upload-form,
-.query-form {
+query-form {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -242,12 +251,31 @@ label {
 
 input[type="file"],
 select,
-input[type="submit"],
-input[type="text"],
-input[type="number"] {
+
+input[type="text"]
+ {
   padding: 10px;
+  height: 40px;
   border: 1px solid #ccc;
   border-radius: 5px;
+}
+
+input[type="number"]{
+  padding: 10px;
+  height: 40px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  
+  
+}
+
+input[type="submit"]{
+  padding: 10px;
+  /* 增加上间距 */
+  margin-top: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  
 }
 
 .form-row {
@@ -263,38 +291,8 @@ input[type="number"] {
   background-color: #e0e0e0;
   border-radius: 5px;
   overflow: auto;
-  height: 100%;
   box-sizing: border-box;
-}
-
-.result-table {
-  width: 100%;
-  height: 80%;
-  overflow: scroll;
-  border-collapse: collapse;
-}
-
-.result-table th,
-.result-table td {
-  border: 1px solid #ccc;
-  padding: 10px;
-  text-align: left;
-}
-
-.result-table th {
-  background-color: #f8f8f8;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.pagination input[type="number"] {
-  width: 60px;
+  margin-left: 10px;
 }
 
 .footer {
