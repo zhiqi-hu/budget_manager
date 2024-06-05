@@ -1,10 +1,12 @@
 <template>
-  <div class="container"
-    :style="{ maxWidth: queryResult && queryResult.length ? '100vw' : '800px', marginTop: queryResult && queryResult.length ? '' : '0px', height: queryResult && queryResult.length ? 'auto' : '' }"
-    style="overflow: auto">
+  <div class="container" :style="{
+    maxWidth: queryResult && queryResult.length ? '100vw' : '800px',
+    marginTop: queryResult && queryResult.length ? '' : '0px',
+    height: queryResult && queryResult.length ? 'auto' : ''
+  }" style="overflow: auto">
     <div class="flex-container">
       <div style="width: 100%">
-        <img class="skp-logo" src="/src/templates/logo-pink.png" alt="SKP Logo">
+        <img class="skp-logo" src="/src/templates/logo-pink.png" alt="SKP Logo" />
         <h1>销售计划导入</h1>
         <form class="upload-form" @submit.prevent="submitForm" enctype="multipart/form-data">
           <label>
@@ -17,11 +19,11 @@
           </label>
           <label>
             选择文件:
-            <input type="file" @change="handleFileChange" accept=".xlsx, .xls" required>
+            <input type="file" @change="handleFileChange" accept=".xlsx, .xls" required />
           </label>
-          <input type="submit" value="上传">
+          <input type="submit" value="上传" />
         </form>
-      
+
         <div style="height: auto" v-if="message" class="message">{{ message }}</div>
 
         <h2>查询数据</h2>
@@ -37,41 +39,34 @@
             </label>
             <label>
               年月:
-              <input v-model="queryNy" type="text" required>
+              <input v-model="queryNy" type="text" required />
             </label>
             <label>
               门店编号:
-              <input v-model="queryFdbh" type="number" required>
+              <input v-model="queryFdbh" type="number" required />
             </label>
           </div>
-          <input type="submit" value="查询">
-          <div style="margin-top: 20px;" v-if="queryResult && queryResult.length">
+          <input type="submit" value="查询" />
+          <div style="margin-top: 20px" v-if="queryResult && queryResult.length">
             门店预算合计：{{ sumAmount ?? 0 }} 元
           </div>
         </form>
       </div>
       <div v-if="queryResult && queryResult.length" class="query-result">
         <h3>查询结果:</h3>
-        <div style="height:750px;overflow: auto;">
+        <div style="height: 750px; overflow: auto">
           <Table :dataSource="queryResult" :columns="tableHeaders" :pagination="false" />
         </div>
-        <a-pagination
-          :current="pageNumber"
-          :total="totalResults"
-          :page-size="pageSize"
-          @change="handlePageChange"
-          @showSizeChange="handlePageSizeChange"
-          show-size-changer
-          :show-total="showTotal"
-        />
+        <a-pagination :current="pageNumber" :total="totalResults" :page-size="pageSize" @change="handlePageChange" @showSizeChange="handlePageSizeChange" show-size-changer
+          :show-total="showTotal" />
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import axios from 'axios';
-import { Table, Pagination } from 'ant-design-vue';
+import axios from 'axios'
+import { Table, Pagination } from 'ant-design-vue'
 
 export default {
   components: { Table, Pagination },
@@ -90,45 +85,45 @@ export default {
       totalResults: 0,
       sumAmount: 0,
       tableHeaders: [
-        { title: '序号', dataIndex: 'index', key: 'index' },
+        { title: '序号', dataIndex: 'index', key: 'index' }
         // 动态添加的列
       ]
-    };
+    }
   },
   methods: {
     handleFileChange(event) {
-      this.selectedFile = event.target.files[0];
+      this.selectedFile = event.target.files[0]
     },
     async submitForm() {
       if (!this.selectedBudgetType || !this.selectedFile) {
-        this.message = '请选择预算类型并选择文件';
-        return;
+        this.message = '请选择预算类型并选择文件'
+        return
       }
 
-      const formData = new FormData();
-      formData.append('budgetFile', this.selectedFile);
-      formData.append('budgetType', this.selectedBudgetType);
-      document.title = this.pageTitle;
+      const formData = new FormData()
+      formData.append('budgetFile', this.selectedFile)
+      formData.append('budgetType', this.selectedBudgetType)
+      document.title = this.pageTitle
       try {
         const response = await axios.post('/upload/uploadFile', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
-        });
+        })
 
         if (response.status === 200) {
-          this.message = '上传成功';
+          this.message = '上传成功'
         } else {
-          this.message = '上传失败';
+          this.message = '上传失败'
         }
       } catch (error) {
-        this.message = `请求出错: ${error.message}`;
+        this.message = `请求出错: ${error.message}`
       }
     },
     async queryData() {
       if (!this.queryBudgetType || !this.queryNy || !this.queryFdbh) {
-        this.message = '请填写查询类型、年月和门店编号';
-        return;
+        this.message = '请填写查询类型、年月和门店编号'
+        return
       }
 
       try {
@@ -140,16 +135,19 @@ export default {
             pageNum: this.pageNumber,
             pageSize: this.pageSize
           }
-        });
+        })
 
         if (response.status === 200 && response.data.data && response.data.data.records.length) {
-          const keys = Object.keys(response.data.data.records[0]);
+          const keys = Object.keys(response.data.data.records[0])
           this.tableHeaders = [
             { title: '序号', dataIndex: 'index', key: 'index' },
-            ...keys.map(item => ({ title: item, dataIndex: item, key: item }))
-          ];
-          this.queryResult = response.data.data.records.map((item, index) => ({ index: (this.pageNumber - 1) * this.pageSize + index + 1, ...item }));
-          this.totalResults = response.data.data.total;
+            ...keys.map((item) => ({ title: item, dataIndex: item, key: item }))
+          ]
+          this.queryResult = response.data.data.records.map((item, index) => ({
+            index: (this.pageNumber - 1) * this.pageSize + index + 1,
+            ...item
+          }))
+          this.totalResults = response.data.data.total
 
           // 获取汇总金额
           const sumResponse = await axios.get('/upload/getSumAmount', {
@@ -158,15 +156,15 @@ export default {
               ny: this.queryNy,
               fdbh: this.queryFdbh
             }
-          });
-          this.sumAmount = sumResponse.data.sumAmount || 0;
+          })
+          this.sumAmount = sumResponse.data.sumAmount || 0
         } else {
-          this.queryResult = [];
-          this.message = '没有查询到数据';
+          this.queryResult = []
+          this.message = '没有查询到数据'
         }
       } catch (error) {
-        this.queryResult = [];
-        this.message = `请求出错: ${error.message}`;
+        this.queryResult = []
+        this.message = `请求出错: ${error.message}`
       }
     },
     async deleteRow(row, rowIndex) {
@@ -180,27 +178,27 @@ export default {
             sbid: row.sbid,
             hth: row.hth
           }
-        });
+        })
 
         if (response.status === 200) {
-          this.queryResult.splice(rowIndex, 1);
+          this.queryResult.splice(rowIndex, 1)
         } else {
-          this.message = '删除失败';
+          this.message = '删除失败'
         }
       } catch (error) {
-        this.message = `删除出错: ${error.message}`;
+        this.message = `删除出错: ${error.message}`
       }
     },
     handlePageChange(page) {
-      this.pageNumber = page;
-      this.queryData();
+      this.pageNumber = page
+      this.queryData()
     },
     handlePageSizeChange(current, size) {
-      this.pageSize = size;
-      this.queryData();
+      this.pageSize = size
+      this.queryData()
     },
     showTotal(total) {
-      return `总共 ${total} 条`;
+      return `总共 ${total} 条`
     }
   }
 }
@@ -249,33 +247,28 @@ label {
   gap: 5px;
 }
 
-input[type="file"],
+input[type='file'],
 select,
-
-input[type="text"]
- {
+input[type='text'] {
   padding: 10px;
   height: 40px;
   border: 1px solid #ccc;
   border-radius: 5px;
 }
 
-input[type="number"]{
+input[type='number'] {
   padding: 10px;
   height: 40px;
   border: 1px solid #ccc;
   border-radius: 5px;
-  
-  
 }
 
-input[type="submit"]{
+input[type='submit'] {
   padding: 10px;
   /* 增加上间距 */
   margin-top: 20px;
   border: 1px solid #ccc;
   border-radius: 5px;
-  
 }
 
 .form-row {
@@ -318,5 +311,9 @@ button:hover {
 button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+.ant-table {
+  background: none;
 }
 </style>
