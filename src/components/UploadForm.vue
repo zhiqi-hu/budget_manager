@@ -1,9 +1,13 @@
 <template>
-  <div class="container" :style="{
-    maxWidth: queryResult && queryResult.length ? '100vw' : '800px',
-    marginTop: queryResult && queryResult.length ? '' : '0px',
-    height: queryResult && queryResult.length ? 'auto' : ''
-  }" style="overflow: auto">
+  <div
+    class="container"
+    :style="{
+      maxWidth: queryResult && queryResult.length ? '100vw' : '800px',
+      marginTop: queryResult && queryResult.length ? '' : '0px',
+      height: queryResult && queryResult.length ? 'auto' : ''
+    }"
+    style="overflow: auto"
+  >
     <div class="flex-container">
       <div style="width: 100%">
         <img class="skp-logo" src="/src/templates/logo-pink.png" alt="SKP Logo" />
@@ -38,15 +42,41 @@
               </select>
             </label>
             <label>
-              年月:
+              查询年月:
               <input v-model="queryNy" type="text" required />
             </label>
             <label>
-              门店编号:
-              <input v-model="queryFdbh" type="number" required />
+              门店名称:
+              <select v-model="queryFdbh" required>
+                <option value="" disabled selected>选择门店名称</option>
+                <option v-for="store in storeNames" :key="store.fdbh" :value="store.fdbh">{{ store.fdmc }}</option>
+              </select>
             </label>
           </div>
-          <input type="submit" value="查询" />
+          <a-button
+            type="submit"
+            @click="queryData"
+            style="
+              margin-top: 20px;
+              margin-left: 20px;
+              border: 1px solid #ccc;
+              border-radius: 5px;
+            "
+            >查询</a-button
+          >
+          <div v-if="queryResult && queryResult.length">
+            <a-button
+              type="primary"
+              @click="exportData"
+              style="
+                margin-top: 20px;
+                margin-left: 20px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+              "
+              >导出数据</a-button
+            >
+          </div>
           <div style="margin-top: 20px" v-if="queryResult && queryResult.length">
             门店预算合计：{{ sumAmount ?? 0 }} 元
           </div>
@@ -57,8 +87,15 @@
         <div style="height: 750px; overflow: auto">
           <Table :dataSource="queryResult" :columns="tableHeaders" :pagination="false" />
         </div>
-        <a-pagination :current="pageNumber" :total="totalResults" :page-size="pageSize" @change="handlePageChange" @showSizeChange="handlePageSizeChange" show-size-changer
-          :show-total="showTotal" />
+        <a-pagination
+          :current="pageNumber"
+          :total="totalResults"
+          :page-size="pageSize"
+          @change="handlePageChange"
+          @showSizeChange="handlePageSizeChange"
+          show-size-changer
+          :show-total="showTotal"
+        />
       </div>
     </div>
   </div>
@@ -78,17 +115,21 @@ export default {
       pageTitle: '销售计划上传',
       queryBudgetType: '',
       queryNy: '',
-      queryFdbh: null,
+      queryFdbh: '',
       pageNumber: 1,
       pageSize: 10,
       queryResult: [],
       totalResults: 0,
       sumAmount: 0,
+      storeNames: [],
       tableHeaders: [
         { title: '序号', dataIndex: 'index', key: 'index' }
         // 动态添加的列
       ]
     }
+  },
+  mounted() {
+    this.fetchStoreNames()
   },
   methods: {
     handleFileChange(event) {
@@ -120,9 +161,51 @@ export default {
         this.message = `请求出错: ${error.message}`
       }
     },
+    async exportData() {
+      if (!this.queryBudgetType || !this.queryNy || !this.queryFdbh) {
+        this.message = '请填写查询类型、年月和门店名称'
+        return
+      }
+
+      try {
+        const response = await axios.get('/export/exportBudGetExcel', {
+          params: {
+            budgetType: this.queryBudgetType,
+            ny: this.queryNy,
+            fdbh: this.queryFdbh
+          },
+          responseType: 'blob' // 确保响应类型为 blob
+        })
+
+        const blob = new Blob([response.data], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+
+        // 获取文件名
+        const contentDisposition = response.headers['content-disposition']
+        let fileName = 'exported_data.xlsx' // 默认文件名
+        if (contentDisposition) {
+          const matches = /filename=([^;]+)/gi.exec(contentDisposition)
+          if (matches != null && matches[1]) {
+            fileName = decodeURIComponent(matches[1].trim())
+          }
+        }
+
+        // 创建下载链接
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', fileName)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+      } catch (error) {
+        this.message = `导出出错: ${error.message}`
+      }
+    },
     async queryData() {
       if (!this.queryBudgetType || !this.queryNy || !this.queryFdbh) {
-        this.message = '请填写查询类型、年月和门店编号'
+        this.message = '请填写查询类型、年月和门店名称'
         return
       }
 
@@ -167,6 +250,19 @@ export default {
         this.message = `请求出错: ${error.message}`
       }
     },
+    async fetchStoreNames() {
+  try {
+    const response = await axios.get('/upload/getStoreName')
+    if (response.status === 200 && response.data && response.data.data.length) {
+      this.storeNames = response.data.data.map(store => ({
+        fdbh: store.fdbh,
+        fdmc: store.fdmc
+      }))
+    }
+  } catch (error) {
+    this.message = `获取门店名称出错: ${error.message}`
+  }
+},
     async deleteRow(row, rowIndex) {
       try {
         const response = await axios.delete('/upload/deleteBudgetList', {
